@@ -22,7 +22,7 @@ PtpFilterInputProcessRequest(
 
 	// Only issue request when fully configured.
 	// Otherwise we will let power recovery process to triage it
-	if (deviceContext->DeviceConfigured == TRUE) {
+	if (deviceContext->IsPoweredOn == TRUE && deviceContext->DeviceConfigured == TRUE) {
 		PtpFilterInputIssueTransportRequest(Device);
 	}
 }
@@ -33,7 +33,11 @@ PtpFilterWorkItemCallback(
 )
 {
 	WDFDEVICE Device = WdfWorkItemGetParentObject(WorkItem);
-	PtpFilterInputIssueTransportRequest(Device);
+	PDEVICE_CONTEXT deviceContext = PtpFilterGetContext(Device);
+
+	if (deviceContext->IsPoweredOn == TRUE && deviceContext->DeviceConfigured == TRUE) {
+		PtpFilterInputIssueTransportRequest(Device);
+	}
 }
 
 VOID
@@ -51,6 +55,9 @@ PtpFilterInputIssueTransportRequest(
 	BOOLEAN requestStatus = FALSE;
 
 	deviceContext = PtpFilterGetContext(Device);
+	if (deviceContext->IsPoweredOn != TRUE || deviceContext->DeviceConfigured != TRUE) {
+		return;
+	}
 
 	WDF_OBJECT_ATTRIBUTES_INIT_CONTEXT_TYPE(&attributes, WORKER_REQUEST_CONTEXT);
 	attributes.ParentObject = Device;
@@ -339,14 +346,38 @@ PtpFilterInputRequestCompletionCallback(
 	PWORKER_REQUEST_CONTEXT requestContext;
 	PDEVICE_CONTEXT deviceContext;
 
+	NTSTATUS completionStatus;
 	size_t responseLength;
 	PUCHAR responseBuffer;
+	WDFMEMORY requestMemory;
 
 	UNREFERENCED_PARAMETER(Target);
 	
 	requestContext = (PWORKER_REQUEST_CONTEXT)Context;
 	deviceContext = requestContext->DeviceContext;
+	requestMemory = requestContext->RequestMemory;
+	completionStatus = Params->IoStatus.Status;
+
+	// Bluetooth selective suspend and disconnects normally complete the
+	// underlying read with an error.  Do not parse the output buffer in that
+	// state, and do not start recovery after D0Exit has begun.
+	if (!NT_SUCCESS(completionStatus)) {
+		TraceEvents(TRACE_LEVEL_WARNING, TRACE_INPUT,
+			"%!FUNC! transport read failed with %!STATUS!", completionStatus);
+		if (deviceContext->IsPoweredOn) {
+			deviceContext->DeviceConfigured = FALSE;
+			WdfTimerStart(deviceContext->HidTransportRecoveryTimer, WDF_REL_TIMEOUT_IN_SEC(3));
+		}
+		goto cleanup;
+	}
+
 	responseLength = (size_t)(LONG)WdfRequestGetInformation(Request);
+	if (responseLength == 0 || Params->Parameters.Ioctl.Output.Buffer == NULL) {
+		if (deviceContext->IsPoweredOn && deviceContext->DeviceConfigured) {
+			WdfWorkItemEnqueue(deviceContext->HidTransportRecoveryWorkItem);
+		}
+		goto cleanup;
+	}
 	responseBuffer = WdfMemoryGetBuffer(Params->Parameters.Ioctl.Output.Buffer, NULL);
 
 	// Pre-flight check 0: Right now we only have Magic Trackpad 2 (BT and USB)
@@ -356,20 +387,16 @@ PtpFilterInputRequestCompletionCallback(
 		goto cleanup;
 	}
 
-	// Pre-flight check 1: if size is 0, this is not something we need. Ignore the read, and issue next request.
-	if (responseLength <= 0) {
-		WdfWorkItemEnqueue(requestContext->DeviceContext->HidTransportRecoveryWorkItem);
-		goto cleanup;
-	}
-
 	PtpFilterInputParseReport(responseBuffer, responseLength, deviceContext);
 
 cleanup:
-	// Cleanup
-	WdfObjectDelete(Request);
-	if (requestContext->RequestMemory != NULL) {
-		WdfObjectDelete(requestContext->RequestMemory);
+	// The request context belongs to Request, so preserve the memory handle and
+	// delete the request last.  Accessing requestContext after deleting Request
+	// is a use-after-free.
+	if (requestMemory != NULL) {
+		WdfObjectDelete(requestMemory);
 	}
+	WdfObjectDelete(Request);
 
 	// We don't issue new request here (unless it's a spurious request - which is handled earlier) to
 	// keep the request pipe go through one-way.
