@@ -10,6 +10,8 @@ This fork respects the original project's GPLv2 license. Source changes are kept
 
 Because this fork modifies the driver binaries after the upstream Microsoft attestation process, the upstream Microsoft signature no longer applies to these builds. Current fork builds are provided as test-signed packages for development and personal testing, and they require trusting the included test certificate and enabling Windows test-signing mode.
 
+Unofficial fork builds in this repository are not upstream or Microsoft-attested releases.
+
 This is a fork of the excellent [imbushuo](https://github.com/imbushuo/mac-precision-touchpad) driver for the Magic Trackpad 2. **It supports Bluetooth**. Compared to imbushuo or to the official 2021 Apple driver, this project adds:
 
 - support for USB-C Magic Trackpad 2
