@@ -1,4 +1,4 @@
-# Magic Trackpad 2 Precision Touchpad driver for Windows 11, signed by Microsoft, no more hacks required 🎉
+# Magic Trackpad 2 Precision Touchpad driver for Windows 11
 
 ## Fork notice
 
