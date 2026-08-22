@@ -3,6 +3,30 @@
 #include <Driver.h>
 #include "Input.tmh"
 
+static BOOLEAN
+PtpFilterSingleFingerButtonExceptionApplies(
+	_In_ BOOLEAN SettingEnabled,
+	_In_ SIZE_T UsableContactCount,
+	_In_ BOOLEAN ButtonStateMatches,
+	_In_ BOOLEAN CurrentButtonDown,
+	_In_ BOOLEAN TipSwitch,
+	_In_ BOOLEAN Confidence,
+	_In_opt_ PPTP_REPORT_AUX MatchingContact,
+	_In_ BOOLEAN PassesPressureFilter,
+	_In_ BOOLEAN PassesSizeFilter
+)
+{
+	return SettingEnabled &&
+		UsableContactCount == 1 &&
+		ButtonStateMatches &&
+		CurrentButtonDown &&
+		TipSwitch &&
+		Confidence &&
+		MatchingContact != NULL &&
+		PassesPressureFilter &&
+		PassesSizeFilter;
+}
+
 VOID
 PtpFilterInputProcessRequest(
 	_In_ WDFDEVICE Device,
@@ -244,28 +268,32 @@ PtpFilterInputParseMT2Report(
 			matching_contact = &DeviceContext->PrevPtpReportAux2;
 
 		allow_button_held_single_finger_motion =
-			driverContext->AllowButtonHeldSingleFingerMotion &&
-			usable_contact_count == 1 &&
-			DeviceContext->PrevIsButtonClicked &&
-			ptpOutputReport.IsButtonClicked &&
-			ptpOutputReport.Contacts[i].TipSwitch &&
-			ptpOutputReport.Contacts[i].Confidence &&
-			matching_contact != NULL &&
-			passes_pressure_filter &&
-			passes_size_filter;
+			PtpFilterSingleFingerButtonExceptionApplies(
+				driverContext->AllowButtonHeldSingleFingerMotion,
+				usable_contact_count,
+				DeviceContext->PrevIsButtonClicked,
+				ptpOutputReport.IsButtonClicked,
+				ptpOutputReport.Contacts[i].TipSwitch,
+				ptpOutputReport.Contacts[i].Confidence,
+				matching_contact,
+				passes_pressure_filter,
+				passes_size_filter
+			);
 		if (allow_button_held_single_finger_motion)
 			button_held_single_finger_motion_active = TRUE;
 
 		debounce_initial_button_click =
-			driverContext->AllowButtonHeldSingleFingerMotion &&
-			usable_contact_count == 1 &&
-			!DeviceContext->PrevIsButtonClicked &&
-			ptpOutputReport.IsButtonClicked &&
-			ptpOutputReport.Contacts[i].TipSwitch &&
-			ptpOutputReport.Contacts[i].Confidence &&
-			matching_contact != NULL &&
-			passes_pressure_filter &&
-			passes_size_filter;
+			PtpFilterSingleFingerButtonExceptionApplies(
+				driverContext->AllowButtonHeldSingleFingerMotion,
+				usable_contact_count,
+				!DeviceContext->PrevIsButtonClicked,
+				ptpOutputReport.IsButtonClicked,
+				ptpOutputReport.Contacts[i].TipSwitch,
+				ptpOutputReport.Contacts[i].Confidence,
+				matching_contact,
+				passes_pressure_filter,
+				passes_size_filter
+			);
 		if (debounce_initial_button_click)
 		{
 			output_x = matching_contact->X;

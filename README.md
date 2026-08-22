@@ -26,6 +26,8 @@ This fork supports macOS-like one-finger physical click-and-drag. When `AllowBut
 
 `AllowButtonHeldSingleFingerMotion` defaults to `1` and applies to both USB and Bluetooth paths. Setting it to `0` restores the previous behavior. This is a narrow exception to the existing `IgnoreButtonFinger` pointer-lock behavior; it does not globally disable `IgnoreButtonFinger` or change multi-finger gestures. If the device changes the contact ID unexpectedly while the physical click is held, the driver prefers the existing safe behavior, so a drag may stop rather than risk a cursor jump.
 
+The control panel reads the USB WUDF registry settings first and falls back to the Bluetooth filter settings when the USB key is not present. Saving mirrors the same settings to both driver paths. Reconnect the trackpad or restart the driver after changing these options so the running driver reloads them.
+
 The previous version of this project used a hack to install itself in the DriverStore and couldn't support Bluetooth. At the beginning of this year, I decided to purchase an EV certificate to properly sign the driver: I paid 485 euros for it, including taxes that I have no way of recovering as an individual (btw, only organizations can request an EV certificate). I was tired of seeing people resorting to the wildest hacks to get the MT2 to work via Bluetooth 😀 (you can get a glimpse of this in the issues of this repo). **Windows drivers signing requirements and costs are unfair to open-source developers**.
 
 ## Installation on Windows 11

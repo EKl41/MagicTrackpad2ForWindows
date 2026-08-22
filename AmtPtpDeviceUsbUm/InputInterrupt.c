@@ -3,6 +3,30 @@
 #include <driver.h>
 #include "InputInterrupt.tmh"
 
+static BOOL
+AmtPtpSingleFingerButtonExceptionApplies(
+	_In_ BOOL SettingEnabled,
+	_In_ size_t UsableContactCount,
+	_In_ BOOL ButtonStateMatches,
+	_In_ BOOL CurrentButtonDown,
+	_In_ BOOL TipSwitch,
+	_In_ BOOL Confidence,
+	_In_opt_ PPTP_REPORT_AUX MatchingContact,
+	_In_ BOOL PassesPressureFilter,
+	_In_ BOOL PassesSizeFilter
+)
+{
+	return SettingEnabled &&
+		UsableContactCount == 1 &&
+		ButtonStateMatches &&
+		CurrentButtonDown &&
+		TipSwitch &&
+		Confidence &&
+		MatchingContact != NULL &&
+		PassesPressureFilter &&
+		PassesSizeFilter;
+}
+
 _IRQL_requires_(PASSIVE_LEVEL)
 NTSTATUS
 AmtPtpConfigContReaderForInterruptEndPoint(
@@ -573,28 +597,32 @@ AmtPtpServiceTouchInputInterruptType5(
 				matching_contact = &DeviceContext->PrevPtpReportAux2;
 
 			allow_button_held_single_finger_motion =
-				DeviceContext->AllowButtonHeldSingleFingerMotion &&
-				usable_contact_count == 1 &&
-				DeviceContext->PrevIsButtonClicked &&
-				PtpReport.IsButtonClicked &&
-				PtpReport.Contacts[i].TipSwitch &&
-				PtpReport.Contacts[i].Confidence &&
-				matching_contact != NULL &&
-				passes_pressure_filter &&
-				passes_size_filter;
+				AmtPtpSingleFingerButtonExceptionApplies(
+					DeviceContext->AllowButtonHeldSingleFingerMotion,
+					usable_contact_count,
+					DeviceContext->PrevIsButtonClicked,
+					PtpReport.IsButtonClicked,
+					PtpReport.Contacts[i].TipSwitch,
+					PtpReport.Contacts[i].Confidence,
+					matching_contact,
+					passes_pressure_filter,
+					passes_size_filter
+				);
 			if (allow_button_held_single_finger_motion)
 				button_held_single_finger_motion_active = TRUE;
 
 			debounce_initial_button_click =
-				DeviceContext->AllowButtonHeldSingleFingerMotion &&
-				usable_contact_count == 1 &&
-				!DeviceContext->PrevIsButtonClicked &&
-				PtpReport.IsButtonClicked &&
-				PtpReport.Contacts[i].TipSwitch &&
-				PtpReport.Contacts[i].Confidence &&
-				matching_contact != NULL &&
-				passes_pressure_filter &&
-				passes_size_filter;
+				AmtPtpSingleFingerButtonExceptionApplies(
+					DeviceContext->AllowButtonHeldSingleFingerMotion,
+					usable_contact_count,
+					!DeviceContext->PrevIsButtonClicked,
+					PtpReport.IsButtonClicked,
+					PtpReport.Contacts[i].TipSwitch,
+					PtpReport.Contacts[i].Confidence,
+					matching_contact,
+					passes_pressure_filter,
+					passes_size_filter
+				);
 			if (debounce_initial_button_click)
 			{
 				output_x = matching_contact->X;

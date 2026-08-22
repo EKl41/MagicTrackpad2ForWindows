@@ -115,28 +115,41 @@ namespace AmtPtpControlPanel
 
             try
             {
-                using (RegistryKey key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\WUDF\Services\AmtPtpDeviceUsbUm\Parameters"))
+                string[] loadPaths =
                 {
-                    delStringRefInt32Void get = (string name, ref Int32 output) =>
-                    {
-                        try
-                        {
-                            output = (Int32)key.GetValue(name);
-                        }
-                        catch
-                        {
-                        }
-                    };
+                    @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\WUDF\Services\AmtPtpDeviceUsbUm\Parameters",
+                    @"SYSTEM\CurrentControlSet\Services\AmtPtpHidFilter\Parameters"
+                };
 
-                    get("ButtonDisabled", ref buttonDisabled);
-                    get("FeedbackClick", ref feedbackClick);
-                    get("FeedbackRelease", ref feedbackRelease);
-                    get("StopPressure", ref stopPressure);
-                    get("StopSize", ref stopSize);
-                    get("IgnoreButtonFinger", ref ignoreButtonFinger);
-                    get("AllowButtonHeldSingleFingerMotion", ref allowButtonHeldSingleFingerMotion);
-                    get("IgnoreNearFingers", ref ignoreNearFingers);
-                    get("PalmRejection", ref palmRejection);
+                foreach (string loadPath in loadPaths)
+                {
+                    using (RegistryKey key = Registry.LocalMachine.OpenSubKey(loadPath))
+                    {
+                        if (key == null)
+                            continue;
+
+                        delStringRefInt32Void get = (string name, ref Int32 output) =>
+                        {
+                            try
+                            {
+                                output = (Int32)key.GetValue(name);
+                            }
+                            catch
+                            {
+                            }
+                        };
+
+                        get("ButtonDisabled", ref buttonDisabled);
+                        get("FeedbackClick", ref feedbackClick);
+                        get("FeedbackRelease", ref feedbackRelease);
+                        get("StopPressure", ref stopPressure);
+                        get("StopSize", ref stopSize);
+                        get("IgnoreButtonFinger", ref ignoreButtonFinger);
+                        get("AllowButtonHeldSingleFingerMotion", ref allowButtonHeldSingleFingerMotion);
+                        get("IgnoreNearFingers", ref ignoreNearFingers);
+                        get("PalmRejection", ref palmRejection);
+                        break;
+                    }
                 }
             }
             catch
