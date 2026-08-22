@@ -109,6 +109,7 @@ namespace AmtPtpControlPanel
             Int32 stopPressure = 0;
             Int32 stopSize = -1;
             Int32 ignoreButtonFinger = 1;
+            Int32 allowButtonHeldSingleFingerMotion = 1;
             Int32 ignoreNearFingers = 1;
             Int32 palmRejection = 1;
 
@@ -133,6 +134,7 @@ namespace AmtPtpControlPanel
                     get("StopPressure", ref stopPressure);
                     get("StopSize", ref stopSize);
                     get("IgnoreButtonFinger", ref ignoreButtonFinger);
+                    get("AllowButtonHeldSingleFingerMotion", ref allowButtonHeldSingleFingerMotion);
                     get("IgnoreNearFingers", ref ignoreNearFingers);
                     get("PalmRejection", ref palmRejection);
                 }
@@ -174,6 +176,9 @@ namespace AmtPtpControlPanel
             if (ignoreButtonFinger != 0)
                 ctlIgnoreButtonFinger.Checked = true;
 
+            if (allowButtonHeldSingleFingerMotion != 0)
+                ctlAllowButtonHeldSingleFingerMotion.Checked = true;
+
             if (ignoreNearFingers != 0)
                 ctlIgnoreNearFingers.Checked = true;
 
@@ -189,6 +194,7 @@ namespace AmtPtpControlPanel
             Int32 stopPressure = 0;
             Int32 stopSize = -1;
             Int32 ignoreButtonFinger = 1;
+            Int32 allowButtonHeldSingleFingerMotion = 1;
             Int32 ignoreNearFingers = 1;
             Int32 palmRejection = 1;
 
@@ -244,6 +250,7 @@ namespace AmtPtpControlPanel
             }
 
             ignoreButtonFinger = ctlIgnoreButtonFinger.Checked ? 1 : 0;
+            allowButtonHeldSingleFingerMotion = ctlAllowButtonHeldSingleFingerMotion.Checked ? 1 : 0;
             ignoreNearFingers = ctlIgnoreNearFingers.Checked ? 1 : 0;
             palmRejection = ctlPalmRejection.Checked ? 1 : 0;
 
@@ -261,6 +268,7 @@ namespace AmtPtpControlPanel
                         keyParameters.SetValue("StopPressure", stopPressure);
                         keyParameters.SetValue("StopSize", stopSize);
                         keyParameters.SetValue("IgnoreButtonFinger", ignoreButtonFinger);
+                        keyParameters.SetValue("AllowButtonHeldSingleFingerMotion", allowButtonHeldSingleFingerMotion);
                         keyParameters.SetValue("IgnoreNearFingers", ignoreNearFingers);
                         keyParameters.SetValue("PalmRejection", palmRejection);
                     }

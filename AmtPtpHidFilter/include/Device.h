@@ -65,6 +65,7 @@ typedef struct _DEVICE_CONTEXT
 	// for locking the pointer
 	PTP_REPORT_AUX  PrevPtpReportAux1, PrevPtpReportAux2;
 	UCHAR           PrevIsButtonClicked;
+	BOOLEAN         ButtonHeldSingleFingerMotionActive;
 	
 } DEVICE_CONTEXT, *PDEVICE_CONTEXT;
 

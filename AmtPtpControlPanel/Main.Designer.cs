@@ -53,6 +53,7 @@ namespace AmtPtpControlPanel
             this.ctlStopDoNothing = new System.Windows.Forms.RadioButton();
             this.groupBox4 = new System.Windows.Forms.GroupBox();
             this.ctlPalmRejection = new System.Windows.Forms.CheckBox();
+            this.ctlAllowButtonHeldSingleFingerMotion = new System.Windows.Forms.CheckBox();
             this.ctlIgnoreButtonFinger = new System.Windows.Forms.CheckBox();
             this.ctlIgnoreNearFingers = new System.Windows.Forms.CheckBox();
             this.ctlBatteryProgressBar = new AmtPtpControlPanel.ProgressBarWithPercentage();
@@ -68,7 +69,7 @@ namespace AmtPtpControlPanel
             // 
             // ctlTouchpadSettings
             // 
-            this.ctlTouchpadSettings.Location = new System.Drawing.Point(13, 537);
+            this.ctlTouchpadSettings.Location = new System.Drawing.Point(13, 558);
             this.ctlTouchpadSettings.Name = "ctlTouchpadSettings";
             this.ctlTouchpadSettings.Size = new System.Drawing.Size(242, 33);
             this.ctlTouchpadSettings.TabIndex = 5;
@@ -78,7 +79,7 @@ namespace AmtPtpControlPanel
             // 
             // ctlApply
             // 
-            this.ctlApply.Location = new System.Drawing.Point(608, 537);
+            this.ctlApply.Location = new System.Drawing.Point(608, 558);
             this.ctlApply.Name = "ctlApply";
             this.ctlApply.Size = new System.Drawing.Size(195, 33);
             this.ctlApply.TabIndex = 0;
@@ -292,27 +293,38 @@ namespace AmtPtpControlPanel
             this.ctlStopDoNothing.CheckedChanged += new System.EventHandler(this.ctlStop_CheckedChanged);
             // 
             // groupBox4
-            // 
+            //
             this.groupBox4.Controls.Add(this.ctlPalmRejection);
+            this.groupBox4.Controls.Add(this.ctlAllowButtonHeldSingleFingerMotion);
             this.groupBox4.Controls.Add(this.ctlIgnoreButtonFinger);
             this.groupBox4.Controls.Add(this.ctlIgnoreNearFingers);
             this.groupBox4.Location = new System.Drawing.Point(12, 365);
             this.groupBox4.Name = "groupBox4";
-            this.groupBox4.Size = new System.Drawing.Size(791, 147);
+            this.groupBox4.Size = new System.Drawing.Size(791, 168);
             this.groupBox4.TabIndex = 4;
             this.groupBox4.TabStop = false;
             this.groupBox4.Text = "Other options:";
-            // 
+            //
             // ctlPalmRejection
-            // 
+            //
             this.ctlPalmRejection.AutoSize = true;
-            this.ctlPalmRejection.Location = new System.Drawing.Point(17, 106);
+            this.ctlPalmRejection.Location = new System.Drawing.Point(17, 132);
             this.ctlPalmRejection.Name = "ctlPalmRejection";
             this.ctlPalmRejection.Size = new System.Drawing.Size(120, 20);
-            this.ctlPalmRejection.TabIndex = 2;
+            this.ctlPalmRejection.TabIndex = 3;
             this.ctlPalmRejection.Text = "Palm Rejection";
             this.ctlPalmRejection.UseVisualStyleBackColor = true;
-            // 
+            //
+            // ctlAllowButtonHeldSingleFingerMotion
+            //
+            this.ctlAllowButtonHeldSingleFingerMotion.AutoSize = true;
+            this.ctlAllowButtonHeldSingleFingerMotion.Location = new System.Drawing.Point(17, 106);
+            this.ctlAllowButtonHeldSingleFingerMotion.Name = "ctlAllowButtonHeldSingleFingerMotion";
+            this.ctlAllowButtonHeldSingleFingerMotion.Size = new System.Drawing.Size(180, 20);
+            this.ctlAllowButtonHeldSingleFingerMotion.TabIndex = 2;
+            this.ctlAllowButtonHeldSingleFingerMotion.Text = "Physical click and drag";
+            this.ctlAllowButtonHeldSingleFingerMotion.UseVisualStyleBackColor = true;
+            //
             // ctlIgnoreButtonFinger
             // 
             this.ctlIgnoreButtonFinger.Location = new System.Drawing.Point(17, 58);
@@ -348,7 +360,7 @@ namespace AmtPtpControlPanel
             // 
             this.ctlBatteryGroupBox.Controls.Add(this.ctlBatteryUpdate);
             this.ctlBatteryGroupBox.Controls.Add(this.ctlBatteryProgressBar);
-            this.ctlBatteryGroupBox.Location = new System.Drawing.Point(13, 586);
+            this.ctlBatteryGroupBox.Location = new System.Drawing.Point(13, 607);
             this.ctlBatteryGroupBox.Name = "ctlBatteryGroupBox";
             this.ctlBatteryGroupBox.Size = new System.Drawing.Size(790, 75);
             this.ctlBatteryGroupBox.TabIndex = 13;
@@ -369,7 +381,7 @@ namespace AmtPtpControlPanel
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(815, 675);
+            this.ClientSize = new System.Drawing.Size(815, 696);
             this.Controls.Add(this.ctlBatteryGroupBox);
             this.Controls.Add(this.groupBox4);
             this.Controls.Add(this.groupBox3);
@@ -424,6 +436,7 @@ namespace AmtPtpControlPanel
         private System.Windows.Forms.RadioButton ctlStopDoNothing;
         private System.Windows.Forms.GroupBox groupBox4;
         private System.Windows.Forms.CheckBox ctlIgnoreButtonFinger;
+        private System.Windows.Forms.CheckBox ctlAllowButtonHeldSingleFingerMotion;
         private System.Windows.Forms.CheckBox ctlIgnoreNearFingers;
         private System.Windows.Forms.CheckBox ctlPalmRejection;
         private ProgressBarWithPercentage ctlBatteryProgressBar;

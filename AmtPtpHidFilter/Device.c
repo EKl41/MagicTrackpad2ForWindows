@@ -81,6 +81,8 @@ PtpFilterCreateDevice(
 	// Initialize pointer lock vars
 	deviceContext->PrevPtpReportAux1.Id = (UINT32)-1;
 	deviceContext->PrevPtpReportAux2.Id = (UINT32)-1;
+	deviceContext->PrevIsButtonClicked = FALSE;
+	deviceContext->ButtonHeldSingleFingerMotionActive = FALSE;
 
     // Initialize read buffer
     status = WdfLookasideListCreate(WDF_NO_OBJECT_ATTRIBUTES, REPORT_BUFFER_SIZE,

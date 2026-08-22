@@ -22,6 +22,7 @@ typedef struct _DRIVER_CONTEXT {
 	ULONG StopPressure;
 	ULONG StopSize;
 	BOOLEAN IgnoreButtonFinger;
+	BOOLEAN AllowButtonHeldSingleFingerMotion;
 	BOOLEAN IgnoreNearFingers;
 	BOOLEAN PalmRejection;
 	ULONG FeedbackClick;

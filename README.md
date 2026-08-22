@@ -1,5 +1,13 @@
 # Magic Trackpad 2 Precision Touchpad driver for Windows 11, signed by Microsoft, no more hacks required 🎉
 
+## Fork notice
+
+This repository is a personal fork of Vito Plantamura's Magic Trackpad 2 driver for Windows. I am grateful to Vito Plantamura, imbushuo, and all contributors whose reverse engineering, signing work, and maintenance made this project useful for Windows users.
+
+The purpose of this fork is to experiment with and maintain a small behavior change for Magic Trackpad physical click-and-drag. In brief, this fork adds an `AllowButtonHeldSingleFingerMotion` setting that lets the same single finger continue moving the pointer while the physical button remains held, enabling macOS-like drag/drop, selection, moving, and resizing. The change is intentionally narrow and keeps the existing `IgnoreButtonFinger` behavior for multi-finger and unsafe contact transitions.
+
+This fork respects the original project's GPLv2 license. Source changes are kept available under the same license, and upstream copyright, credit, and license notices should be preserved.
+
 This is a fork of the excellent [imbushuo](https://github.com/imbushuo/mac-precision-touchpad) driver for the Magic Trackpad 2. **It supports Bluetooth**. Compared to imbushuo or to the official 2021 Apple driver, this project adds:
 
 - support for USB-C Magic Trackpad 2
@@ -9,6 +17,12 @@ This is a fork of the excellent [imbushuo](https://github.com/imbushuo/mac-preci
 - a control panel:
 
 ![Control Panel](https://raw.githubusercontent.com/vitoplantamura/MagicTrackpad2ForWindows/master/assets/ControlPanel.png)
+
+## Physical click and drag
+
+This fork supports macOS-like one-finger physical click-and-drag. When `AllowButtonHeldSingleFingerMotion` is enabled, the same finger that is holding the trackpad's physical click can continue moving the pointer, so normal Windows drag/drop, window movement, resizing and text selection work while the physical button remains held.
+
+`AllowButtonHeldSingleFingerMotion` defaults to `1` and applies to both USB and Bluetooth paths. Setting it to `0` restores the previous behavior. This is a narrow exception to the existing `IgnoreButtonFinger` pointer-lock behavior; it does not globally disable `IgnoreButtonFinger` or change multi-finger gestures. If the device changes the contact ID unexpectedly while the physical click is held, the driver prefers the existing safe behavior, so a drag may stop rather than risk a cursor jump.
 
 The previous version of this project used a hack to install itself in the DriverStore and couldn't support Bluetooth. At the beginning of this year, I decided to purchase an EV certificate to properly sign the driver: I paid 485 euros for it, including taxes that I have no way of recovering as an individual (btw, only organizations can request an EV certificate). I was tired of seeing people resorting to the wildest hacks to get the MT2 to work via Bluetooth 😀 (you can get a glimpse of this in the issues of this repo). **Windows drivers signing requirements and costs are unfair to open-source developers**.
 

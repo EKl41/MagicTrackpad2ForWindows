@@ -134,6 +134,7 @@ PtpFilterReadSettings(
 	DriverContext->StopPressure = PtpFilterReadSettingValue(L"StopPressure", 0);
 	DriverContext->StopSize = PtpFilterReadSettingValue(L"StopSize", 0xffffffff);
 	DriverContext->IgnoreButtonFinger = PtpFilterReadSettingValue(L"IgnoreButtonFinger", 1) ? TRUE : FALSE;
+	DriverContext->AllowButtonHeldSingleFingerMotion = PtpFilterReadSettingValue(L"AllowButtonHeldSingleFingerMotion", 1) ? TRUE : FALSE;
 	DriverContext->IgnoreNearFingers = PtpFilterReadSettingValue(L"IgnoreNearFingers", 1) ? TRUE : FALSE;
 	DriverContext->PalmRejection = PtpFilterReadSettingValue(L"PalmRejection", 0) ? TRUE : FALSE;
 	DriverContext->FeedbackClick = PtpFilterReadSettingValue(L"FeedbackClick", 0x08081E);

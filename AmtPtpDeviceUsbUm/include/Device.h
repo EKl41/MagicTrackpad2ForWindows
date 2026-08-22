@@ -35,10 +35,12 @@ typedef struct _DEVICE_CONTEXT
 	PTP_REPORT_AUX              PrevPtpReportAux1, PrevPtpReportAux2;
 	BOOL						PrevPtpReportAuxAndSettingsInited;
 	UCHAR                       PrevIsButtonClicked;
+	BOOL                        ButtonHeldSingleFingerMotionActive;
 	BOOL                        ButtonDisabled;
 	ULONG                       StopPressure;
 	ULONG                       StopSize;
 	BOOL                        IgnoreButtonFinger;
+	BOOL                        AllowButtonHeldSingleFingerMotion;
 	BOOL                        IgnoreNearFingers;
 	BOOL                        PalmRejection;
 

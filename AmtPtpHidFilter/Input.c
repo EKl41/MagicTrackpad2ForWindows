@@ -137,6 +137,7 @@ PtpFilterInputParseMT2Report(
 	SIZE_T raw_n;
 	INT x, y = 0;
 	UINT32 timestamp;
+	BOOLEAN button_held_single_finger_motion_active = FALSE;
 	
 	driver = WdfGetDriver();
 	if (driver == NULL)
@@ -180,6 +181,13 @@ PtpFilterInputParseMT2Report(
 	raw_n = (BufferLength - sizeof(TRACKPAD_REPORT_TYPE5)) / sizeof(TRACKPAD_FINGER_TYPE5);
 	if (raw_n >= PTP_MAX_CONTACT_POINTS) raw_n = PTP_MAX_CONTACT_POINTS;
 	ptpOutputReport.ContactCount = (UCHAR) raw_n;
+	if (raw_n == 0)
+	{
+		DeviceContext->PrevPtpReportAux1.Id = (UINT32)-1;
+		DeviceContext->PrevPtpReportAux2.Id = (UINT32)-1;
+		DeviceContext->PrevPtpReportAux1.TipSwitch = FALSE;
+		DeviceContext->PrevPtpReportAux2.TipSwitch = FALSE;
+	}
 	for (size_t i = 0; i < raw_n; i++) {
 		f = &mt_report->Fingers[i];
 
@@ -211,17 +219,46 @@ PtpFilterInputParseMT2Report(
 #define UINT32_SET_MSB(v) ((UINT32)v | ((UINT32)1 << 31))
 
 		PPTP_REPORT_AUX prev_contact = NULL;
+		PPTP_REPORT_AUX matching_contact = NULL;
+		BOOLEAN passes_pressure_filter = driverContext->StopPressure == 0xffffffff ? TRUE : f->Pressure > driverContext->StopPressure;
+		BOOLEAN passes_size_filter = driverContext->StopSize == 0xffffffff ? TRUE : f->Size > driverContext->StopSize;
+		BOOLEAN allow_button_held_single_finger_motion = FALSE;
+
+		if (DeviceContext->PrevPtpReportAux1.Id == f->Id || DeviceContext->PrevPtpReportAux1.Id == UINT32_SET_MSB(f->Id))
+			matching_contact = &DeviceContext->PrevPtpReportAux1;
+		else if (DeviceContext->PrevPtpReportAux2.Id == f->Id || DeviceContext->PrevPtpReportAux2.Id == UINT32_SET_MSB(f->Id))
+			matching_contact = &DeviceContext->PrevPtpReportAux2;
+
+		allow_button_held_single_finger_motion =
+			driverContext->AllowButtonHeldSingleFingerMotion &&
+			raw_n == 1 &&
+			DeviceContext->PrevIsButtonClicked &&
+			ptpOutputReport.IsButtonClicked &&
+			ptpOutputReport.Contacts[i].TipSwitch &&
+			ptpOutputReport.Contacts[i].Confidence &&
+			matching_contact != NULL &&
+			passes_pressure_filter &&
+			passes_size_filter;
+		if (allow_button_held_single_finger_motion)
+			button_held_single_finger_motion_active = TRUE;
+
 		if (
-			DeviceContext->PrevPtpReportAux1.Id != UINT32_SET_MSB(f->Id) &&
-			DeviceContext->PrevPtpReportAux2.Id != UINT32_SET_MSB(f->Id) &&
-			(driverContext->IgnoreButtonFinger == FALSE ? TRUE : (!DeviceContext->PrevIsButtonClicked || !ptpOutputReport.IsButtonClicked)) &&
-			(driverContext->StopPressure == 0xffffffff ? TRUE : f->Pressure > driverContext->StopPressure) &&
-			(driverContext->StopSize == 0xffffffff ? TRUE : f->Size > driverContext->StopSize)
+			(
+				(
+					DeviceContext->PrevPtpReportAux1.Id != UINT32_SET_MSB(f->Id) &&
+					DeviceContext->PrevPtpReportAux2.Id != UINT32_SET_MSB(f->Id) &&
+					(driverContext->IgnoreButtonFinger == FALSE ? TRUE : (!DeviceContext->PrevIsButtonClicked || !ptpOutputReport.IsButtonClicked))
+				) || allow_button_held_single_finger_motion
+			) &&
+			passes_pressure_filter &&
+			passes_size_filter
 		)
 		{
 			PPTP_REPORT_AUX contact;
 
-			if (DeviceContext->PrevPtpReportAux1.Id == f->Id)
+			if (matching_contact != NULL)
+				contact = matching_contact;
+			else if (DeviceContext->PrevPtpReportAux1.Id == f->Id)
 				contact = &DeviceContext->PrevPtpReportAux1;
 			else if (DeviceContext->PrevPtpReportAux2.Id == f->Id)
 				contact = &DeviceContext->PrevPtpReportAux2;
@@ -264,6 +301,21 @@ PtpFilterInputParseMT2Report(
 #undef UINT32_SET_MSB
 	}
 	
+	if (DeviceContext->ButtonHeldSingleFingerMotionActive != button_held_single_finger_motion_active)
+	{
+#if DBG
+		if (button_held_single_finger_motion_active)
+		{
+			TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_INPUT, "ButtonHeldSingleFingerMotion: activated");
+		}
+		else
+		{
+			TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_INPUT, "ButtonHeldSingleFingerMotion: deactivated");
+		}
+#endif
+		DeviceContext->ButtonHeldSingleFingerMotionActive = button_held_single_finger_motion_active;
+	}
+
 	DeviceContext->PrevIsButtonClicked = ptpOutputReport.IsButtonClicked;
 
 	status = WdfRequestRetrieveOutputMemory(ptpRequest, &ptpRequestMemory);
