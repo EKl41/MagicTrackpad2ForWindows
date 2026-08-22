@@ -135,6 +135,7 @@ PtpFilterInputParseMT2Report(
 	const TRACKPAD_REPORT_TYPE5* mt_report;
 	const TRACKPAD_FINGER_TYPE5* f;
 	SIZE_T raw_n;
+	SIZE_T usable_contact_count = 0;
 	INT x, y = 0;
 	UINT32 timestamp;
 	BOOLEAN button_held_single_finger_motion_active = FALSE;
@@ -190,6 +191,16 @@ PtpFilterInputParseMT2Report(
 	}
 	for (size_t i = 0; i < raw_n; i++) {
 		f = &mt_report->Fingers[i];
+		BOOLEAN tip_switch = (f->State & 0x4) && (driverContext->IgnoreNearFingers == FALSE ? TRUE : !(f->State & 0x2));
+		BOOLEAN confidence = driverContext->PalmRejection == FALSE ? TRUE : f->Finger != 6;
+		BOOLEAN passes_pressure_filter = driverContext->StopPressure == 0xffffffff ? TRUE : f->Pressure > driverContext->StopPressure;
+		BOOLEAN passes_size_filter = driverContext->StopSize == 0xffffffff ? TRUE : f->Size > driverContext->StopSize;
+
+		if (tip_switch && confidence && passes_pressure_filter && passes_size_filter)
+			usable_contact_count++;
+	}
+	for (size_t i = 0; i < raw_n; i++) {
+		f = &mt_report->Fingers[i];
 
 		// Sign extend
 		x = (SHORT)(f->AbsoluteX << 3) >> 3;
@@ -223,6 +234,9 @@ PtpFilterInputParseMT2Report(
 		BOOLEAN passes_pressure_filter = driverContext->StopPressure == 0xffffffff ? TRUE : f->Pressure > driverContext->StopPressure;
 		BOOLEAN passes_size_filter = driverContext->StopSize == 0xffffffff ? TRUE : f->Size > driverContext->StopSize;
 		BOOLEAN allow_button_held_single_finger_motion = FALSE;
+		BOOLEAN debounce_initial_button_click = FALSE;
+		USHORT output_x = (USHORT)x;
+		USHORT output_y = (USHORT)y;
 
 		if (DeviceContext->PrevPtpReportAux1.Id == f->Id || DeviceContext->PrevPtpReportAux1.Id == UINT32_SET_MSB(f->Id))
 			matching_contact = &DeviceContext->PrevPtpReportAux1;
@@ -231,7 +245,7 @@ PtpFilterInputParseMT2Report(
 
 		allow_button_held_single_finger_motion =
 			driverContext->AllowButtonHeldSingleFingerMotion &&
-			raw_n == 1 &&
+			usable_contact_count == 1 &&
 			DeviceContext->PrevIsButtonClicked &&
 			ptpOutputReport.IsButtonClicked &&
 			ptpOutputReport.Contacts[i].TipSwitch &&
@@ -241,6 +255,22 @@ PtpFilterInputParseMT2Report(
 			passes_size_filter;
 		if (allow_button_held_single_finger_motion)
 			button_held_single_finger_motion_active = TRUE;
+
+		debounce_initial_button_click =
+			driverContext->AllowButtonHeldSingleFingerMotion &&
+			usable_contact_count == 1 &&
+			!DeviceContext->PrevIsButtonClicked &&
+			ptpOutputReport.IsButtonClicked &&
+			ptpOutputReport.Contacts[i].TipSwitch &&
+			ptpOutputReport.Contacts[i].Confidence &&
+			matching_contact != NULL &&
+			passes_pressure_filter &&
+			passes_size_filter;
+		if (debounce_initial_button_click)
+		{
+			output_x = matching_contact->X;
+			output_y = matching_contact->Y;
+		}
 
 		if (
 			(
@@ -295,8 +325,8 @@ PtpFilterInputParseMT2Report(
 				}
 			}
 		}
-		ptpOutputReport.Contacts[i].X = prev_contact ? prev_contact->X : (USHORT)x;
-		ptpOutputReport.Contacts[i].Y = prev_contact ? prev_contact->Y : (USHORT)y;
+		ptpOutputReport.Contacts[i].X = prev_contact ? prev_contact->X : output_x;
+		ptpOutputReport.Contacts[i].Y = prev_contact ? prev_contact->Y : output_y;
 
 #undef UINT32_SET_MSB
 	}

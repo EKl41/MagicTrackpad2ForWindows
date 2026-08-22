@@ -436,6 +436,7 @@ AmtPtpServiceTouchInputInterruptType5(
 	UINT timestamp;
 	INT x, y = 0;
 	size_t raw_n, i = 0;
+	size_t usable_contact_count = 0;
 	BOOL button_held_single_finger_motion_active = FALSE;
 
 	Status = WdfIoQueueRetrieveNextRequest(
@@ -514,6 +515,17 @@ AmtPtpServiceTouchInputInterruptType5(
 		);
 #endif
 
+		for (i = 0; i < raw_n; i++) {
+			f = &mt_report->Fingers[i];
+			BOOL tip_switch = (f->State & 0x4) && (DeviceContext->IgnoreNearFingers == FALSE ? TRUE : !(f->State & 0x2));
+			BOOL confidence = DeviceContext->PalmRejection == FALSE ? TRUE : f->Finger != 6;
+			BOOL passes_pressure_filter = DeviceContext->StopPressure == 0xffffffff ? TRUE : f->Pressure > DeviceContext->StopPressure;
+			BOOL passes_size_filter = DeviceContext->StopSize == 0xffffffff ? TRUE : f->Size > DeviceContext->StopSize;
+
+			if (tip_switch && confidence && passes_pressure_filter && passes_size_filter)
+				usable_contact_count++;
+		}
+
 		// Fingers to array
 		for (i = 0; i < raw_n; i++) {
 			f = &mt_report->Fingers[i];
@@ -551,6 +563,9 @@ AmtPtpServiceTouchInputInterruptType5(
 			BOOL passes_pressure_filter = DeviceContext->StopPressure == 0xffffffff ? TRUE : f->Pressure > DeviceContext->StopPressure;
 			BOOL passes_size_filter = DeviceContext->StopSize == 0xffffffff ? TRUE : f->Size > DeviceContext->StopSize;
 			BOOL allow_button_held_single_finger_motion = FALSE;
+			BOOL debounce_initial_button_click = FALSE;
+			USHORT output_x = (USHORT)x;
+			USHORT output_y = (USHORT)y;
 
 			if (DeviceContext->PrevPtpReportAux1.Id == f->Id || DeviceContext->PrevPtpReportAux1.Id == UINT32_SET_MSB(f->Id))
 				matching_contact = &DeviceContext->PrevPtpReportAux1;
@@ -559,7 +574,7 @@ AmtPtpServiceTouchInputInterruptType5(
 
 			allow_button_held_single_finger_motion =
 				DeviceContext->AllowButtonHeldSingleFingerMotion &&
-				raw_n == 1 &&
+				usable_contact_count == 1 &&
 				DeviceContext->PrevIsButtonClicked &&
 				PtpReport.IsButtonClicked &&
 				PtpReport.Contacts[i].TipSwitch &&
@@ -569,6 +584,22 @@ AmtPtpServiceTouchInputInterruptType5(
 				passes_size_filter;
 			if (allow_button_held_single_finger_motion)
 				button_held_single_finger_motion_active = TRUE;
+
+			debounce_initial_button_click =
+				DeviceContext->AllowButtonHeldSingleFingerMotion &&
+				usable_contact_count == 1 &&
+				!DeviceContext->PrevIsButtonClicked &&
+				PtpReport.IsButtonClicked &&
+				PtpReport.Contacts[i].TipSwitch &&
+				PtpReport.Contacts[i].Confidence &&
+				matching_contact != NULL &&
+				passes_pressure_filter &&
+				passes_size_filter;
+			if (debounce_initial_button_click)
+			{
+				output_x = matching_contact->X;
+				output_y = matching_contact->Y;
+			}
 
 			if (
 				(
@@ -623,8 +654,8 @@ AmtPtpServiceTouchInputInterruptType5(
 					}
 				}
 			}
-			PtpReport.Contacts[i].X = prev_contact ? prev_contact->X : (USHORT)x;
-			PtpReport.Contacts[i].Y = prev_contact ? prev_contact->Y : (USHORT)y;
+			PtpReport.Contacts[i].X = prev_contact ? prev_contact->X : output_x;
+			PtpReport.Contacts[i].Y = prev_contact ? prev_contact->Y : output_y;
 
 #undef UINT32_SET_MSB
 
