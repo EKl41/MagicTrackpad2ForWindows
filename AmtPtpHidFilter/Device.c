@@ -117,6 +117,7 @@ PtpFilterCreateDevice(
     deviceContext->VendorID = 0;
     deviceContext->ProductID = 0;
     deviceContext->VersionNumber = 0;
+    deviceContext->IsPoweredOn = FALSE;
     deviceContext->DeviceConfigured = FALSE;
 
     // Initialize IO queue
@@ -176,12 +177,15 @@ PtpFilterDeviceD0Entry(
     _In_ WDF_POWER_DEVICE_STATE PreviousState
 )
 {
+    PDEVICE_CONTEXT deviceContext;
     NTSTATUS status = STATUS_SUCCESS;
 
     PAGED_CODE();
-    UNREFERENCED_PARAMETER(Device);
     UNREFERENCED_PARAMETER(PreviousState);
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Entry");
+
+    deviceContext = PtpFilterGetContext(Device);
+    deviceContext->IsPoweredOn = TRUE;
 
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Exit, Status = %!STATUS!", status);
     return status;
@@ -203,8 +207,11 @@ PtpFilterDeviceD0Exit(
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Entry");
     deviceContext = PtpFilterGetContext(Device);
 
-    // Reset device state
+    // Prevent timer/work-item callbacks from issuing new transport requests
+    // while the underlying Bluetooth HID stack is leaving D0.
+    deviceContext->IsPoweredOn = FALSE;
     deviceContext->DeviceConfigured = FALSE;
+    WdfTimerStop(deviceContext->HidTransportRecoveryTimer, FALSE);
 
     // Cancelling all outstanding requests
     while (NT_SUCCESS(status)) {
@@ -236,6 +243,10 @@ PtpFilterSelfManagedIoInit(
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Entry");
 
     deviceContext = PtpFilterGetContext(Device);
+
+    // Do not leave the previous configuration state visible while the
+    // Bluetooth transport is being reconfigured.
+    deviceContext->DeviceConfigured = FALSE;
     status = PtpFilterDetourWindowsHIDStack(Device);
     if (!NT_SUCCESS(status)) {
         TraceEvents(TRACE_LEVEL_ERROR, TRACE_DEVICE, "%!FUNC! PtpFilterDetourWindowsHIDStack failed, Status = %!STATUS!", status);
@@ -296,6 +307,9 @@ PtpFilterSelfManagedIoRestart(
     PAGED_CODE();
     TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DEVICE, "%!FUNC! Entry");
     deviceContext = PtpFilterGetContext(Device);
+
+    // Do not issue new reads until the transport has been reconfigured.
+    deviceContext->DeviceConfigured = FALSE;
 
     // If this is first D0, it will be done in self-managed IO init.
     if (deviceContext->IsHidIoDetourCompleted) {
@@ -742,9 +756,15 @@ PtpFilterRecoveryTimerCallback(
     device = WdfTimerGetParentObject(Timer);
     deviceContext = PtpFilterGetContext(device);
 
+    // A failed/cancelled HID read can race with D0Exit.  Recovery must wait
+    // for SelfManagedIoRestart after the device returns to D0.
+    if (!deviceContext->IsPoweredOn) {
+        return;
+    }
+
     // We will try to reinitialize the device
     status = PtpFilterSelfManagedIoRestart(device);
-    if (NT_SUCCESS(status)) {
+    if (NT_SUCCESS(status) && deviceContext->IsPoweredOn && deviceContext->DeviceConfigured) {
         // If succeeded, proceed to reissue the request.
         // Otherwise it will retry the process after a few seconds.
         PtpFilterInputIssueTransportRequest(device);

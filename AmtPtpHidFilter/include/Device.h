@@ -54,6 +54,7 @@ typedef struct _DEVICE_CONTEXT
     WDFWORKITEM HidTransportRecoveryWorkItem;
 
     // Device State
+    BOOLEAN IsPoweredOn;
     BOOLEAN DeviceConfigured;
 
     // PTP report specific

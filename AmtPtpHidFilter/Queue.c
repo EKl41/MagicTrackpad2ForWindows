@@ -124,6 +124,13 @@ FilterEvtIoStop(
 )
 {
     UNREFERENCED_PARAMETER(Queue);
-    UNREFERENCED_PARAMETER(Request);
-    UNREFERENCED_PARAMETER(ActionFlags);
+
+	// Every request presented to EvtIoStop must be completed, cancelled, or
+	// acknowledged.  Returning without doing so can block a power transition.
+	if (ActionFlags & WdfRequestStopActionSuspend) {
+		WdfRequestStopAcknowledge(Request, FALSE);
+	}
+	else {
+		WdfRequestCancelSentRequest(Request);
+	}
 }
